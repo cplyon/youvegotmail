@@ -69,23 +69,3 @@ class YGMTest(unittest.TestCase):
         with self.assertRaises(JSONDecodeError):
             ygm.read_config(config)
 
-    def test_compose_email(self) -> None:
-        TO = ["matt@example.com", "steve@example.com"]
-        FROM = "chris@example.com"
-        SUBJECT = "Hi there!"
-        MESSAGE = "Call me tomorrow."
-
-        ygm = YouveGotMail()
-        ygm.from_address = FROM
-        ygm.to_addresses = TO
-        ygm.subject = SUBJECT
-        ygm.message = MESSAGE
-
-        with BytesIO() as img:
-            msg = ygm.compose_email(img)
-
-        self.assertIn(TO[0], msg)
-        self.assertIn(TO[1], msg)
-        self.assertIn(FROM, msg)
-        self.assertIn(SUBJECT, msg)
-        self.assertIn(MESSAGE, msg)

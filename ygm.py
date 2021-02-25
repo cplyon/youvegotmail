@@ -1,11 +1,11 @@
 #! /usr/bin/env python3
 
 from datetime import datetime
-from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
+from email.mime.image import MIMEImage
 from email.mime.text import MIMEText
 from email.utils import COMMASPACE, formatdate
-from io import StringIO, BytesIO
+from io import StringIO
 from picamera import PiCamera
 
 import json
@@ -45,15 +45,16 @@ class YouveGotMail():
             camera.capture(image_path)
         return image_path
 
-    def compose_email(self, file_stream: BytesIO) -> str:
+    def compose_email(self, attachment_path: str) -> str:
         msg = MIMEMultipart()
         msg["From"] = self.from_address
         msg["To"] = COMMASPACE.join(self.to_addresses)
         msg["Date"] = formatdate(localtime=True)
         msg["Subject"] = self.subject
         msg.attach(MIMEText(self.message))
-        if file_stream:
-            img = MIMEImage(file_stream.read(), "jpg")
+
+        with open(attachment_path, 'rb') as f:
+            img = MIMEImage(f.read(), "jpg")
             img.add_header('Content-ID', '<{}>'.format(
                 os.path.basename("image.jpg")))
             msg.attach(img)
@@ -94,7 +95,6 @@ if __name__ == "__main__":
         print("Door open!")
         time.sleep(10)
         image_path = ygm.take_photo()
-        msg = ""
-        with open(image_path) as f:
-            msg = ygm.compose_email(f)
+        print(image_path)
+        msg = ygm.compose_email(image_path)
         ygm.send_email(msg)
