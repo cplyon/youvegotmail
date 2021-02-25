@@ -89,8 +89,6 @@ if __name__ == "__main__":
         ygm.read_config(f)
     ygm.setup_gpio()
 
-    ygm.send_email(ygm.compose_email(None))
-
     while True:
         ygm.wait_for_switch_open()
         print("Door open!")
