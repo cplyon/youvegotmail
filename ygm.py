@@ -42,6 +42,7 @@ class YouveGotMail():
                                     datetime.now().strftime(
                                         "%b_%d_%Y_%H_%M_%S")))
         with PiCamera() as camera:
+            camrea.brightness = 60
             camera.capture(image_path)
         return image_path
 
@@ -55,8 +56,7 @@ class YouveGotMail():
 
         with open(attachment_path, 'rb') as f:
             img = MIMEImage(f.read(), "jpg")
-            img.add_header('Content-ID', '<{}>'.format(
-                os.path.basename("image.jpg")))
+            img.add_header('Content-ID', '<{}>'.format("image.jpg"))
             msg.attach(img)
 
         return msg.as_string()

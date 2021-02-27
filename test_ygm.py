@@ -68,4 +68,3 @@ class YGMTest(unittest.TestCase):
         ygm = YouveGotMail()
         with self.assertRaises(JSONDecodeError):
             ygm.read_config(config)
-
