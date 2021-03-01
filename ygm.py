@@ -42,7 +42,7 @@ class YouveGotMail():
                                     datetime.now().strftime(
                                         "%b_%d_%Y_%H_%M_%S")))
         with PiCamera() as camera:
-            camrea.brightness = 60
+            camera.brightness = 60
             camera.capture(image_path)
         return image_path
 
