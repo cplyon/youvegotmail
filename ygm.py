@@ -26,6 +26,7 @@ class YouveGotMail():
         self.from_address = None
         self.subject = None
         self.message = None
+        self.brightness = None
         self.switch_pin = None
         self.image_location = None
 
@@ -42,7 +43,7 @@ class YouveGotMail():
                                     datetime.now().strftime(
                                         "%b_%d_%Y_%H_%M_%S")))
         with PiCamera() as camera:
-            camera.brightness = 60
+            camera.brightness = self.brightness
             camera.capture(image_path)
         return image_path
 
@@ -78,6 +79,7 @@ class YouveGotMail():
         self.to_addresses = config["to"]
         self.subject = config["subject"]
         self.message = config["message"]
+        self.brightness = config["brightness"]
         self.switch_pin = config["switch_pin"]
         self.image_location = config["image_location"]
 

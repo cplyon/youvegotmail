@@ -24,26 +24,28 @@ class YGMTest(unittest.TestCase):
     def test_read_config_positive(self) -> None:
         ACCOUNT = "chris@example.com"
         PASSWORD = "p@ssw0rd!"
-        PORT = "1919"
+        PORT = 1919
         SERVER = "smpt.example.com"
         TO = "['matt@example.com']"
         FROM = "chris@example.com"
         SUBJECT = "Hi there!"
         MESSAGE = "Call me tomorrow."
-        SWITCH_PIN = "1"
+        BRIGHTNESS = 60
+        SWITCH_PIN = 1
         IMAGE_LOCATION = "/home/chris/"
 
         with StringIO() as config:
             config.write('{\n')
             config.write('"account": "{}",\n'.format(ACCOUNT))
             config.write('"password": "{}",\n'.format(PASSWORD))
-            config.write('"port": "{}",\n'.format(PORT))
+            config.write('"port": {},\n'.format(PORT))
             config.write('"server": "{}",\n'.format(SERVER))
             config.write('"to": "{}",\n'.format(TO))
             config.write('"from": "{}",\n'.format(FROM))
             config.write('"subject": "{}",\n'.format(SUBJECT))
             config.write('"message": "{}",\n'.format(MESSAGE))
-            config.write('"switch_pin": "{}",\n'.format(SWITCH_PIN))
+            config.write('"switch_pin": {},\n'.format(SWITCH_PIN))
+            config.write('"brightness": {},\n'.format(BRIGHTNESS))
             config.write('"image_location": "{}"\n'.format(IMAGE_LOCATION))
             config.write('}\n')
             config.seek(0)
@@ -59,6 +61,7 @@ class YGMTest(unittest.TestCase):
         self.assertEqual(ygm.subject, SUBJECT)
         self.assertEqual(ygm.message, MESSAGE)
         self.assertEqual(ygm.switch_pin, SWITCH_PIN)
+        self.assertEqual(ygm.brightness, BRIGHTNESS)
         self.assertEqual(ygm.image_location, IMAGE_LOCATION)
 
     def test_read_config_negative(self) -> None:
