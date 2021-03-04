@@ -57,7 +57,8 @@ class YouveGotMail():
 
         with open(attachment_path, 'rb') as f:
             img = MIMEImage(f.read(), "jpg")
-            img.add_header('Content-ID', '<{}>'.format("image.jpg"))
+            img.add_header('Content-ID', '<image>')
+            img.add_header('Content-Disposition', 'inline', filename='image.jpg')
             msg.attach(img)
 
         return msg.as_string()
