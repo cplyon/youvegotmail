@@ -1,5 +1,11 @@
 #! /usr/bin/env python3
 
+import json
+import os
+import smtplib
+import ssl
+import time
+
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
@@ -7,13 +13,7 @@ from email.mime.text import MIMEText
 from email.utils import COMMASPACE, formatdate
 from io import StringIO
 from picamera import PiCamera
-
-import json
-import os
-import smtplib
-import ssl
-import time
-import RPi.GPIO as GPIO
+from RPi import GPIO
 
 
 class YouveGotMail():
@@ -37,11 +37,13 @@ class YouveGotMail():
     def wait_for_switch_open(self):
         GPIO.wait_for_edge(self.switch_pin, GPIO.RISING)
 
+    def wait_for_switch_close(self):
+        GPIO.wait_for_edge(self.switch_pin, GPIO.FALLING)
+
     def take_photo(self) -> str:
-        image_path = os.path.join(self.image_location,
-                                  "image_{}.jpg".format(
-                                    datetime.now().strftime(
-                                        "%b_%d_%Y_%H_%M_%S")))
+        image_path = os.path.join(
+                self.image_location,
+                f"image_{datetime.now().strftime('%b_%d_%Y_%H_%M_%S')}.jpg")
         with PiCamera() as camera:
             camera.brightness = self.brightness
             camera.capture(image_path)
@@ -55,10 +57,12 @@ class YouveGotMail():
         msg["Subject"] = self.subject
         msg.attach(MIMEText(self.message))
 
-        with open(attachment_path, 'rb') as f:
-            img = MIMEImage(f.read(), "jpg")
-            img.add_header('Content-ID', '<image>')
-            img.add_header('Content-Disposition', 'inline', filename='image.jpg')
+        with open(attachment_path, "rb") as image_file:
+            img = MIMEImage(image_file.read(), "jpg")
+            img.add_header("Content-ID", "<image>")
+            img.add_header("Content-Disposition",
+                           "inline",
+                           filename="image.jpg")
             msg.attach(img)
 
         return msg.as_string()
@@ -89,15 +93,16 @@ if __name__ == "__main__":
 
     CONFIG_PATH = "./config.json"
     ygm = YouveGotMail()
-    with open(CONFIG_PATH) as f:
-        ygm.read_config(f)
+    with open(CONFIG_PATH, "r", encoding="utf8") as conf:
+        ygm.read_config(conf)
     ygm.setup_gpio()
 
     while True:
         ygm.wait_for_switch_open()
         print("Door open!")
         time.sleep(10)
-        image_path = ygm.take_photo()
-        print(image_path)
-        msg = ygm.compose_email(image_path)
-        ygm.send_email(msg)
+        image = ygm.take_photo()
+        print(image)
+        message = ygm.compose_email(image)
+        ygm.send_email(message)
+        ygm.wait_for_switch_close()
