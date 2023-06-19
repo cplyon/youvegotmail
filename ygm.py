@@ -12,6 +12,7 @@ from email.mime.image import MIMEImage
 from email.mime.text import MIMEText
 from email.utils import COMMASPACE, formatdate
 from io import StringIO
+from socket import gaierror
 from picamera import PiCamera
 from RPi import GPIO
 
@@ -29,6 +30,7 @@ class YouveGotMail():
         self.brightness = None
         self.switch_pin = None
         self.image_location = None
+        self.mail_sent = False
 
     def setup_gpio(self):
         GPIO.setmode(GPIO.BCM)
@@ -73,6 +75,7 @@ class YouveGotMail():
             server.starttls(context=context)
             server.login(self.account, self.password)
             server.sendmail(self.from_address, self.to_addresses, msg)
+        self.mail_sent = True
 
     def read_config(self, file_stream: StringIO):
         config = json.load(file_stream)
@@ -92,6 +95,8 @@ class YouveGotMail():
 if __name__ == "__main__":
 
     CONFIG_PATH = "./config.json"
+    MAIL_SEND_SLEEP_SECONDS = 60
+    DOOR_SLEEP_SECONDS = 10
     ygm = YouveGotMail()
     with open(CONFIG_PATH, "r", encoding="utf8") as conf:
         ygm.read_config(conf)
@@ -100,9 +105,17 @@ if __name__ == "__main__":
     while True:
         ygm.wait_for_switch_open()
         print("Door open!")
-        time.sleep(10)
+        time.sleep(DOOR_SLEEP_SECONDS)
         image = ygm.take_photo()
         print(image)
         message = ygm.compose_email(image)
-        ygm.send_email(message)
+
+        while not ygm.mail_sent:
+            try:
+                ygm.send_email(message)
+            except (gaierror, smtplib.SMTPServerDisconnected, OSError) as error:
+                print(error)
+                print(f"Mail failed to send, retrying in {MAIL_SEND_SLEEP_SECONDS}")
+                time.sleep(MAIL_SEND_SLEEP_SECONDS)
+        ygm.mail_sent = False
         ygm.wait_for_switch_close()
