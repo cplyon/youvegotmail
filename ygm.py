@@ -17,7 +17,7 @@ from picamera import PiCamera
 from RPi import GPIO
 
 
-class YouveGotMail():
+class YouveGotMail:
     def __init__(self):
         self.account = None
         self.password = None
@@ -44,8 +44,9 @@ class YouveGotMail():
 
     def take_photo(self) -> str:
         image_path = os.path.join(
-                self.image_location,
-                f"image_{datetime.now().strftime('%b_%d_%Y_%H_%M_%S')}.jpg")
+            self.image_location,
+            f"image_{datetime.now().strftime('%b_%d_%Y_%H_%M_%S')}.jpg",
+        )
         with PiCamera() as camera:
             camera.brightness = self.brightness
             camera.capture(image_path)
@@ -62,9 +63,7 @@ class YouveGotMail():
         with open(attachment_path, "rb") as image_file:
             img = MIMEImage(image_file.read(), "jpg")
             img.add_header("Content-ID", "<image>")
-            img.add_header("Content-Disposition",
-                           "inline",
-                           filename="image.jpg")
+            img.add_header("Content-Disposition", "inline", filename="image.jpg")
             msg.attach(img)
 
         return msg.as_string()
@@ -93,7 +92,6 @@ class YouveGotMail():
 
 
 if __name__ == "__main__":
-
     CONFIG_PATH = "./config.json"
     MAIL_SEND_SLEEP_SECONDS = 60
     DOOR_SLEEP_SECONDS = 10
