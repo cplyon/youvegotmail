@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import json
+import logging
 import os
 import smtplib
 import ssl
@@ -30,7 +31,6 @@ class YouveGotMail:
         self.brightness = None
         self.switch_pin = None
         self.image_location = None
-        self.mail_sent = False
 
     def setup_gpio(self):
         GPIO.setmode(GPIO.BCM)
@@ -38,9 +38,11 @@ class YouveGotMail:
 
     def wait_for_switch_open(self):
         GPIO.wait_for_edge(self.switch_pin, GPIO.RISING)
+        logging.warning("Door opened")
 
     def wait_for_switch_close(self):
         GPIO.wait_for_edge(self.switch_pin, GPIO.FALLING)
+        logging.warning("Door closed")
 
     def take_photo(self) -> str:
         image_path = os.path.join(
@@ -74,7 +76,6 @@ class YouveGotMail:
             server.starttls(context=context)
             server.login(self.account, self.password)
             server.sendmail(self.from_address, self.to_addresses, msg)
-        self.mail_sent = True
 
     def read_config(self, file_stream: StringIO):
         config = json.load(file_stream)
@@ -91,10 +92,7 @@ class YouveGotMail:
         self.image_location = config["image_location"]
 
 
-if __name__ == "__main__":
-    CONFIG_PATH = "./config.json"
-    MAIL_SEND_SLEEP_SECONDS = 60
-    DOOR_SLEEP_SECONDS = 10
+def main():
     ygm = YouveGotMail()
     with open(CONFIG_PATH, "r", encoding="utf8") as conf:
         ygm.read_config(conf)
@@ -102,18 +100,41 @@ if __name__ == "__main__":
 
     while True:
         ygm.wait_for_switch_open()
-        print("Door open!")
         time.sleep(DOOR_SLEEP_SECONDS)
         image = ygm.take_photo()
-        print(image)
+        logging.debug(image)
         message = ygm.compose_email(image)
 
-        while not ygm.mail_sent:
+        retry_counter = 0
+        mail_sent = False
+        while not mail_sent:
             try:
                 ygm.send_email(message)
             except (gaierror, smtplib.SMTPServerDisconnected, OSError) as error:
-                print(error)
-                print(f"Mail failed to send, retrying in {MAIL_SEND_SLEEP_SECONDS}")
+                logging.debug(error)
+                if retry_counter >= MAX_RETRIES:
+                    logging.debug("%s retries reached, abort sending mail", MAX_RETRIES)
+                    break
+                logging.debug("Mail failed to send, retrying in %s", MAIL_SEND_SLEEP_SECONDS)
                 time.sleep(MAIL_SEND_SLEEP_SECONDS)
-        ygm.mail_sent = False
+                retry_counter += 1
+            else:
+                mail_sent = True
+
         ygm.wait_for_switch_close()
+
+
+if __name__ == "__main__":
+    CONFIG_PATH = "./config.json"
+    MAIL_SEND_SLEEP_SECONDS = 60
+    DOOR_SLEEP_SECONDS = 10
+    MAX_RETRIES = 2
+    LOG_NAME = "ygm.log"
+
+    logging.basicConfig(filename=LOG_NAME,
+                    filemode='a',
+                    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+                    datefmt='%H:%M:%S',
+                    level=logging.DEBUG)
+
+    main()
