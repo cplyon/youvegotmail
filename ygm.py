@@ -50,8 +50,8 @@ class YouveGotMail:
 
     def compose_email(self, attachment_path: str) -> str:
         msg = MIMEMultipart()
-        msg["From"] = self.config["from_address"]
-        msg["To"] = COMMASPACE.join(self.config["to_addresses"])
+        msg["From"] = self.config["from"]
+        msg["To"] = COMMASPACE.join(self.config["to"])
         msg["Date"] = formatdate(localtime=True)
         msg["Subject"] = self.config["subject"]
         msg.attach(MIMEText(self.config["message"]))
@@ -70,7 +70,7 @@ class YouveGotMail:
         with smtplib.SMTP(self.config["server"], self.config["port"]) as server:
             server.starttls(context=context)
             server.login(self.config["account"], self.config["password"])
-            server.sendmail(self.config["from_address"], self.config["to_addresses"], msg)
+            server.sendmail(self.config["from"], self.config["to"], msg)
 
     def read_config(self, file_stream: StringIO):
         logging.info("Reading config")
