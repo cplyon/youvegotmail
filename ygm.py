@@ -30,11 +30,11 @@ class YouveGotMail:
 
     def wait_for_switch_open(self):
         GPIO.wait_for_edge(self.config["switch_pin"], GPIO.RISING)
-        logging.debug("Door opened")
+        logging.info("Door opened")
 
     def wait_for_switch_close(self):
         GPIO.wait_for_edge(self.config["switch_pin"], GPIO.FALLING)
-        logging.debug("Door closed")
+        logging.info("Door closed")
 
     def take_photo(self) -> str:
         image_path = os.path.join(
@@ -44,7 +44,7 @@ class YouveGotMail:
         logging.info("Taking photo")
         with PiCamera() as camera:
             camera.brightness = self.config["brightness"]
-            logging.debug("Saving photo to %s", image_path)
+            logging.info("Saving photo to %s", image_path)
             camera.capture(image_path)
         return image_path
 
