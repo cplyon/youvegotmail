@@ -28,13 +28,15 @@ class YouveGotMail:
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.config["switch_pin"], GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-    def wait_for_switch_open(self):
+    def wait_for_switch_open(self) -> int:
         GPIO.wait_for_edge(self.config["switch_pin"], GPIO.RISING)
         logging.info("Door opened")
+        return int(datetime.now().timestamp())
 
-    def wait_for_switch_close(self):
+    def wait_for_switch_close(self) -> int:
         GPIO.wait_for_edge(self.config["switch_pin"], GPIO.FALLING)
         logging.info("Door closed")
+        return int(datetime.now().timestamp())
 
     def take_photo(self) -> str:
         image_path = os.path.join(
@@ -84,7 +86,11 @@ def main():
     ygm.setup_gpio()
 
     while True:
-        ygm.wait_for_switch_open()
+        last_opened_timestamp = ygm.wait_for_switch_open()
+        last_closed_timestamp = ygm.wait_for_switch_close()
+        if last_opened_timestamp == last_closed_timestamp:
+            # sub-second triggers are considered false positives
+            continue
         time.sleep(DOOR_SLEEP_SECONDS)
         image = ygm.take_photo()
         message = ygm.compose_email(image)
@@ -104,8 +110,6 @@ def main():
                 retry_counter += 1
             else:
                 mail_sent = True
-
-        ygm.wait_for_switch_close()
 
 
 if __name__ == "__main__":
