@@ -44,7 +44,7 @@ class YouveGotMail:
             f"image_{datetime.now().strftime('%b_%d_%Y_%H_%M_%S')}.jpg",
         )
         logging.info("Taking photo")
-        with PiCamera() as camera:
+        with Picamera2() as camera:
             camera.brightness = self.config["brightness"]
             logging.info("Saving photo to %s", image_path)
             camera.capture(image_path)
