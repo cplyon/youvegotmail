@@ -29,12 +29,20 @@ class YouveGotMail:
         GPIO.setup(self.config["switch_pin"], GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
     def wait_for_switch_open(self) -> int:
-        GPIO.wait_for_edge(self.config["switch_pin"], GPIO.RISING)
+        pin = self.config["switch_pin"]
+        while GPIO.input(pin) == GPIO.LOW:
+            logging.info("Waiting for GPIO.LOW to end")
+            GPIO.wait_for_edge(pin, GPIO.RISING, bouncetime=200)
+            time.sleep(0.05)  # Settle time to verify it wasn't a brief noise
         logging.info("Door opened")
         return int(datetime.now().timestamp())
 
     def wait_for_switch_close(self) -> int:
-        GPIO.wait_for_edge(self.config["switch_pin"], GPIO.FALLING)
+        pin = self.config["switch_pin"]
+        while GPIO.input(pin) == GPIO.HIGH:
+            logging.info("Waiting for GPIO.HIGH to end")
+            GPIO.wait_for_edge(pin, GPIO.FALLING, bouncetime=200)
+            time.sleep(0.05)  # Settle time to verify it wasn't a brief noise
         logging.info("Door closed")
         return int(datetime.now().timestamp())
 
@@ -85,37 +93,47 @@ def main():
         ygm.read_config(conf)
     ygm.setup_gpio()
 
-    while True:
-        last_opened_timestamp = ygm.wait_for_switch_open()
-        last_closed_timestamp = ygm.wait_for_switch_close()
-        if last_opened_timestamp == last_closed_timestamp:
-            # sub-second triggers are considered false positives
-            continue
-        time.sleep(DOOR_SLEEP_SECONDS)
-        image = ygm.take_photo()
-        message = ygm.compose_email(image)
+    try:
+        while True:
+            ygm.wait_for_switch_open()
+            open_mono = time.monotonic()
 
-        retry_counter = 0
-        mail_sent = False
-        while not mail_sent:
-            try:
-                ygm.send_email(message)
-            except (gaierror, smtplib.SMTPServerDisconnected, OSError) as error:
-                logging.error(error)
-                if retry_counter >= MAX_RETRIES:
-                    logging.error("%s retries reached, abort sending mail", MAX_RETRIES)
-                    break
-                logging.warning("Mail failed to send, retrying in %s", MAIL_SEND_SLEEP_SECONDS)
-                time.sleep(MAIL_SEND_SLEEP_SECONDS)
-                retry_counter += 1
-            else:
-                mail_sent = True
+            ygm.wait_for_switch_close()
+            close_mono = time.monotonic()
+            if (close_mono - open_mono) < MIN_OPEN_DURATION:
+                # sub-second triggers are considered false positives
+                continue
+
+            time.sleep(DOOR_SLEEP_SECONDS)
+            image = ygm.take_photo()
+            message = ygm.compose_email(image)
+
+            retry_counter = 0
+            mail_sent = False
+            while not mail_sent:
+                try:
+                    ygm.send_email(message)
+                except (gaierror, smtplib.SMTPServerDisconnected, OSError) as error:
+                    logging.error(error)
+                    if retry_counter >= MAX_RETRIES:
+                        logging.error("%s retries reached, abort sending mail", MAX_RETRIES)
+                        break
+                    logging.warning("Mail failed to send, retrying in %s", MAIL_SEND_SLEEP_SECONDS)
+                    time.sleep(MAIL_SEND_SLEEP_SECONDS)
+                    retry_counter += 1
+                else:
+                    mail_sent = True
+    except KeyboardInterrupt:
+        logging.info("Shutting down door monitor")
+    finally:
+        GPIO.cleanup()
 
 
 if __name__ == "__main__":
     CONFIG_PATH = "./config.json"
     MAIL_SEND_SLEEP_SECONDS = 60
     DOOR_SLEEP_SECONDS = 10
+    MIN_OPEN_DURATION = 0.5  # Ignore triggers shorter than 500ms
     MAX_RETRIES = 2
     LOG_FILE_NAME = "ygm.log"
 
