@@ -14,35 +14,27 @@ from email.mime.text import MIMEText
 from email.utils import COMMASPACE, formatdate
 from io import StringIO
 from socket import gaierror
-from picamera2 import Picamera2
-from RPi import GPIO
 
+from gpiozero import Button
+from picamera2 import Picamera2
 
 class YouveGotMail:
     def __init__(self):
         self.config = {}
+        self.switch = None
         logging.info("Starting up")
 
     def setup_gpio(self):
         logging.info("Setting up GPIO")
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(self.config["switch_pin"], GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        self.switch = Button(self.config["switch_pin"], pull_up=True, bounce_time=0.2)
 
     def wait_for_switch_open(self) -> int:
-        pin = self.config["switch_pin"]
-        while GPIO.input(pin) == GPIO.LOW:
-            logging.info("Waiting for GPIO.LOW to end")
-            GPIO.wait_for_edge(pin, GPIO.RISING, bouncetime=200)
-            time.sleep(0.05)  # Settle time to verify it wasn't a brief noise
+        self.switch.wait_for_release()
         logging.info("Door opened")
         return int(datetime.now().timestamp())
 
     def wait_for_switch_close(self) -> int:
-        pin = self.config["switch_pin"]
-        while GPIO.input(pin) == GPIO.HIGH:
-            logging.info("Waiting for GPIO.HIGH to end")
-            GPIO.wait_for_edge(pin, GPIO.FALLING, bouncetime=200)
-            time.sleep(0.05)  # Settle time to verify it wasn't a brief noise
+        self.switch.wait_for_press()
         logging.info("Door closed")
         return int(datetime.now().timestamp())
 
@@ -100,7 +92,9 @@ def main():
 
             ygm.wait_for_switch_close()
             close_mono = time.monotonic()
+
             if (close_mono - open_mono) < MIN_OPEN_DURATION:
+                logging.info("Sub-second trigger detected")
                 # sub-second triggers are considered false positives
                 continue
 
@@ -124,9 +118,10 @@ def main():
                 else:
                     mail_sent = True
     except KeyboardInterrupt:
-        logging.info("Shutting down door monitor")
+        logging.info("Keyboard-triggered abort.")
     finally:
-        GPIO.cleanup()
+        if ygm.switch:
+            ygm.switch.close()
 
 
 if __name__ == "__main__":
