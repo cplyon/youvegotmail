@@ -14,7 +14,7 @@ from email.mime.text import MIMEText
 from email.utils import COMMASPACE, formatdate
 from io import StringIO
 from socket import gaierror
-from picamera import PiCamera
+from picamera2 import Picamera2
 from RPi import GPIO
 
 
